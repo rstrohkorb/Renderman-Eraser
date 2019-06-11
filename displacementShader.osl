@@ -1,0 +1,31 @@
+shader displacementShader(float age = 1.5,
+                          output float resultAmount = 0,
+                          output point resultVector = 0)
+{
+    point center = point(0.080642402, 0.0, 0.0);
+
+    // transform matrix
+    matrix tx = matrix(2, 0, 0, 0,
+                       0, 0.5, 0, 0,
+                       0, 0, 1, 0,
+                       -0.112984844, 0.25, 0, 1);
+
+    // transform necessary values
+    point trcenter = transform(tx, center);
+    point trP = transform(tx, P);
+
+    // distance from sphere
+    float dist = distance(trP, trcenter);
+
+    // factor in distance
+    float fuzz = age * 0.1;
+    float distfact = smoothstep(age - fuzz, age + fuzz, dist);
+    
+    // find point on circle in P-center line
+    point trpcircle = (normalize(trP - trcenter) * age) + trcenter;
+    point pcircle = transform(1/tx, trpcircle);
+
+    // results
+    resultVector = mix(normalize(cross(N, P)), normalize(P - center), distfact);
+    resultAmount = mix(0, -distance(P, pcircle), distfact);
+}

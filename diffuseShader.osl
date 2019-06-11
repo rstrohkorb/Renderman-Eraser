@@ -1,0 +1,91 @@
+shader diffuseShader (float s=0 [[int lockgeom=0]],
+                      float t=0 [[int lockgeom=0]],
+                      int numCircles = 100,
+                      float age=1.5,
+                      float seed=0.0,
+                      output color result = 0) 
+{
+    point center = point(0.5, 0.5, 0.0);
+
+    // CREATE BASE TEXTURE
+    // colors
+    color surfaceColor = color(0.4373,0.4373,0.4480);
+    color spot0 = color(0.0578,0.1778,0.5137); //blue
+    color spot1 = color(0.0137,0.3484,0.1580); //green
+    color spot2 = color(0.2367,0.1019,0.4588); //purple
+    color spot3 = color(0.4686,0.1392,0.3706); //pink
+
+    // random helper
+    float seedhelper = seed;
+    float urand(float val)
+    {
+        seedhelper+=1;
+        return cellnoise(seedhelper, val);
+    }
+
+    result = surfaceColor;
+    // loop for randomly placing circles  
+    for(int i = 0; i < numCircles; i++)
+    {
+        // new circle center
+        point newPos = center + point((urand(s)-0.5)*0.75, (urand(t)-0.5)*0.75, 0);
+        point here = point(s, t, 0.0);
+        // for look - cycle out 2 of the random values
+        urand(s);
+        urand(t);
+        // radius calculations
+        float radius = 0.4 * urand(s) * 0.2;
+        float fuzzy = 0.1 * radius;
+        float r = distance(newPos, here);
+        float inCircle = 1 - smoothstep(radius - fuzzy, radius + fuzzy, r);
+        // pick this circle's color
+        int colorval = int(floor(urand(s*t) * 4.0));
+        color spotColor;
+        if(colorval == 0)
+        {
+            spotColor = spot0;
+        }
+        else if(colorval == 1)
+        {
+            spotColor = spot1;
+        }
+        else if(colorval == 2)
+        {
+            spotColor = spot2;
+        }
+        else
+        {
+            spotColor = spot3;
+        }
+        // add streak on top of circle color
+        //color spotWithStreak = mix(spotColor, discoloration, inStreak);
+        // add on top of result
+        result = mix(result, spotColor, inCircle);
+    }
+    // ADD DISCOLORATION ACROSS OBJECT
+    // acquire discoloration value
+    float repeat = numCircles/5;
+    float dg = noise(s * repeat, t * repeat);
+    float l = 0.3;
+    color discoloration = color(dg + l, dg + l, dg + l);
+    // apply streaks across texture
+    float dist = abs(s - dg)* abs(t - dg);
+    float streakSize = 0.09;
+    float fuzzy = streakSize * 0.9;
+    float inStreak = smoothstep(streakSize - fuzzy, streakSize + fuzzy, dist);
+    result = mix(result, discoloration * result, inStreak);
+
+    // Aging discoloration - eraser rubbings
+    point ncenter = point(0.080642402, 0.0, 0.0);
+    vector ntest = normalize(P - ncenter);
+    // if(N == ntest)
+    // {
+    //     float er = noise(s *100, t*100 );
+    //     result = result * color(er, er, er);
+    // }
+    if((t > age) && (s > 0.25) && (s < 0.94))
+    {
+        float er = noise(s *80, t*80 );
+        result = result * color(er, er, er);
+    }
+}
